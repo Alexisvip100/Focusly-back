@@ -1,0 +1,46 @@
+export interface ITask {
+  id: string;
+  userId: string;
+  title: string;
+  notesEncrypted: string;
+  estimateTimer?: number;
+  realTimer?: number;
+  duration?: Date;
+  priorityLevel: number;
+  category?: string;
+  startDate?: Date;
+  deadline: Date;
+  status:
+    | 'Todo'
+    | 'Planning'
+    | 'Pending'
+    | 'On Hold'
+    | 'Review'
+    | 'Done'
+    | 'Backlog'
+    | 'Scheduled'
+    | 'Archived';
+  completedAt?: Date;
+  subtasks: {
+    title: string;
+    completed: boolean;
+    timer: number;
+    notesEncrypted?: string;
+    estimateTimer?: number;
+    priorityLevel?: number;
+    status?: string;
+    deadline?: Date | string;
+    category?: string;
+  }[];
+  createdAt: Date;
+  updatedAt: Date;
+  deletedAt?: Date;
+  tags: { name: string }[];
+  filters?: {
+    priority: string[];
+    category: string[];
+    status: string[];
+  };
+  links?: { title: string; url: string }[];
+  google_event_id?: string;
+}
