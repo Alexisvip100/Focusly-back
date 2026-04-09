@@ -29,7 +29,7 @@ import { GoogleCalendarModule } from './modules/google-calendar/google-calendar.
     ThrottlerModule.forRoot([
       {
         ttl: 60000,
-        limit: 10,
+        limit: 60,
       },
     ]),
     GraphQLModule.forRoot<ApolloDriverConfig>({
