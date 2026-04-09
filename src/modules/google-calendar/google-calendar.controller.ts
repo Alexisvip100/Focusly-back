@@ -11,6 +11,8 @@ import {
 } from '@nestjs/common';
 import { GoogleCalendarService } from './google-calendar.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { processGoogleEvent } from './utils/google-calendar.pipeline';
+import { GoogleEvent } from './interfaces/google-calendar.interfaces';
 
 @Controller('google-calendar')
 @UseGuards(JwtAuthGuard)
@@ -21,9 +23,18 @@ export class GoogleCalendarController {
   async getEvents(@Request() req: any) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const userId = req.user.userId as string;
-    return (await this.googleCalendarService.getEvents(
-      userId,
-    )) as Promise<unknown>;
+    const rawData = (await this.googleCalendarService.getEvents(userId)) as {
+      items?: GoogleEvent[];
+    };
+
+    if (!rawData.items) return [];
+
+    // Process each event through the pipeline
+    const processedEvents = await Promise.all(
+      rawData.items.map((event) => processGoogleEvent(event)),
+    );
+
+    return processedEvents;
   }
 
   @Post('events')
