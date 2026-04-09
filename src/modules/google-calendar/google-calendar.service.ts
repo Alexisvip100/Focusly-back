@@ -5,20 +5,33 @@ import { AuthService } from '../auth/auth.service';
 export class GoogleCalendarService {
   constructor(private readonly authService: AuthService) {}
 
-  async getEvents(userId: string) {
+  async getEvents(userId: string, timeMin?: string, timeMax?: string) {
     const { access_token } =
       await this.authService.refreshGoogleAccessToken(userId);
-    const params = new URLSearchParams({
-      timeMin: new Date(
-        new Date().setFullYear(new Date().getFullYear() - 1),
-      ).toISOString(),
+
+    const params: Record<string, string> = {
       maxResults: '2500',
       singleEvents: 'true',
       orderBy: 'startTime',
-    });
+    };
+
+    if (timeMin) {
+      params.timeMin = timeMin;
+    } else {
+      // Default to 1 month ago if no date provided
+      const defaultMin = new Date();
+      defaultMin.setMonth(defaultMin.getMonth() - 1);
+      params.timeMin = defaultMin.toISOString();
+    }
+
+    if (timeMax) {
+      params.timeMax = timeMax;
+    }
 
     const response = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/primary/events?${params.toString()}`,
+      `https://www.googleapis.com/calendar/v3/calendars/primary/events?${new URLSearchParams(
+        params,
+      ).toString()}`,
       {
         headers: { Authorization: `Bearer ${access_token}` },
       },

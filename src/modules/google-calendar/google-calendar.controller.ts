@@ -6,13 +6,13 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   Request,
   UseGuards,
 } from '@nestjs/common';
 import { GoogleCalendarService } from './google-calendar.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { processGoogleEvent } from './utils/google-calendar.pipeline';
-import { GoogleEvent } from './interfaces/google-calendar.interfaces';
 
 @Controller('google-calendar')
 @UseGuards(JwtAuthGuard)
@@ -20,11 +20,19 @@ export class GoogleCalendarController {
   constructor(private readonly googleCalendarService: GoogleCalendarService) {}
 
   @Get('events')
-  async getEvents(@Request() req: any) {
+  async getEvents(
+    @Request() req: any,
+    @Query('timeMin') timeMin?: string,
+    @Query('timeMax') timeMax?: string,
+  ) {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
     const userId = req.user.userId as string;
-    const rawData = (await this.googleCalendarService.getEvents(userId)) as {
-      items?: GoogleEvent[];
+    const rawData = (await this.googleCalendarService.getEvents(
+      userId,
+      timeMin,
+      timeMax,
+    )) as {
+      items?: any[];
     };
 
     if (!rawData.items) return [];
