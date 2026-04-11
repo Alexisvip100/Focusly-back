@@ -28,6 +28,7 @@ export interface GoogleEvent {
     self?: boolean;
   };
   location?: string;
+  colorId?: string;
 }
 
 export interface ProcessedGoogleTask {
