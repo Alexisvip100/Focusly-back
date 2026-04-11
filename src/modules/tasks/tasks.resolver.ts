@@ -94,8 +94,12 @@ export class TasksResolver {
       deadline: new Date(createTaskInput.deadline),
       status: rest.status ?? TaskStatus.Todo,
       category: rest.category,
-      estimated_start_date: estimated_start_date ? new Date(estimated_start_date) : undefined,
-      estimated_end_date: estimated_end_date ? new Date(estimated_end_date) : undefined,
+      estimated_start_date: estimated_start_date
+        ? new Date(estimated_start_date)
+        : undefined,
+      estimated_end_date: estimated_end_date
+        ? new Date(estimated_end_date)
+        : undefined,
     };
     return this.tasksService.create(taskData);
   }
@@ -145,9 +149,13 @@ export class TasksResolver {
       updateData.links = links.map((l) => ({ title: l.title, url: l.url }));
 
     if (estimated_start_date !== undefined)
-      updateData.estimated_start_date = estimated_start_date ? new Date(estimated_start_date) : undefined;
+      updateData.estimated_start_date = estimated_start_date
+        ? new Date(estimated_start_date)
+        : undefined;
     if (estimated_end_date !== undefined)
-      updateData.estimated_end_date = estimated_end_date ? new Date(estimated_end_date) : undefined;
+      updateData.estimated_end_date = estimated_end_date
+        ? new Date(estimated_end_date)
+        : undefined;
     Object.assign(updateData, rest);
 
     return this.tasksService.update(id, updateData);

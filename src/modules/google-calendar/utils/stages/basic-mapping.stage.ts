@@ -4,6 +4,31 @@ import {
 } from '../../interfaces/google-calendar.interfaces';
 import { ITask } from '../../../tasks/interfaces/task.interface';
 
+const mapGoogleColorToPriority = (colorId?: string): number => {
+  if (!colorId) return 1; // Default to Low priority
+
+  const priorityMap: Record<string, number> = {
+    // High Priority (Level 3) - Reds, Pinks, Oranges, Bold Purples
+    '11': 3, // Tomato
+    '4': 3, // Flamingo
+    '6': 3, // Tangerine
+    '3': 3, // Grape
+
+    // Medium Priority (Level 2) - Yellows, Blues, Bright Greens
+    '5': 2, // Banana
+    '9': 2, // Blueberry
+    '7': 2, // Peacock
+    '2': 2, // Sage
+
+    // Low Priority (Level 1) - Lavenders, Dark Greens, Greys
+    '1': 1, // Lavender
+    '10': 1, // Basil
+    '8': 1, // Graphite
+  };
+
+  return priorityMap[colorId] || 1;
+};
+
 export const BasicMappingStage = (event: GoogleEvent): ProcessedGoogleTask => {
   const isAllDay = !!event.start?.date;
   const start = event.start?.dateTime
@@ -27,7 +52,7 @@ export const BasicMappingStage = (event: GoogleEvent): ProcessedGoogleTask => {
     estimated_start_date: start.toISOString(),
     estimated_end_date: deadline.toISOString(),
     status: 'Scheduled' as ITask['status'],
-    priority_level: 3,
+    priority_level: mapGoogleColorToPriority(event.colorId),
     subtasks: [],
     tags: [],
     links: [],
