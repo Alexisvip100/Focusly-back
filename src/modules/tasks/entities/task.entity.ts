@@ -121,4 +121,10 @@ export class Task {
 
   @Field({ name: 'google_event_id', nullable: true })
   googleEventId?: string;
+
+  @Field(() => Date, { name: 'estimated_start_date', nullable: true })
+  estimated_start_date?: Date;
+
+  @Field(() => Date, { name: 'estimated_end_date', nullable: true })
+  estimated_end_date?: Date;
 }

@@ -47,8 +47,16 @@ export class WorkspacesService {
     } as Workspace;
   }
 
-  async findAll(userId: string, search?: string, folderId?: string): Promise<Workspace[]> {
-    let query: admin.firestore.Query = this.collectionRef.where('userId', '==', userId);
+  async findAll(
+    userId: string,
+    search?: string,
+    folderId?: string,
+  ): Promise<Workspace[]> {
+    let query: admin.firestore.Query = this.collectionRef.where(
+      'userId',
+      '==',
+      userId,
+    );
 
     if (folderId) {
       query = query.where('folderId', '==', folderId);

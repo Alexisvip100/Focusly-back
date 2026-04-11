@@ -147,13 +147,25 @@ export class AuthService {
     }
   }
 
-  private generateJwt(user: IUser) {
-    // EL 'sub' ES EL ID DEL USUARIO, ESTO GARANTIZA QUE EL TOKEN SEA DIFERENTE
-    // PARA CADA USUARIO, YA QUE EL ID ES ÚNICO (UUID).
+  async refreshSession(userId: string) {
+    const user = await this.usersService.findOne(userId);
+    if (!user) {
+      throw new UnauthorizedException('User not found');
+    }
+    return user;
+  }
+
+  generateJwt(user: IUser) {
     const payload = { email: user.email, sub: user.id, role: user.role };
+    // Access token: 15 minutes
+    const access_token = this.jwtService.sign(payload, { expiresIn: '15m' });
+    // Refresh token: 7 days
+    const refresh_token = this.jwtService.sign(payload, { expiresIn: '7d' });
+
     return {
-      access_token: this.jwtService.sign(payload),
-      user, // Devolvemos también el usuario para el frontend
+      access_token,
+      refresh_token,
+      user,
     };
   }
 }

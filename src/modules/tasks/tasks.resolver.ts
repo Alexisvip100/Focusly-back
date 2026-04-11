@@ -76,6 +76,8 @@ export class TasksResolver {
       priority_level,
       tags,
       links,
+      estimated_start_date,
+      estimated_end_date,
       ...rest
     } = createTaskInput;
 
@@ -92,6 +94,8 @@ export class TasksResolver {
       deadline: new Date(createTaskInput.deadline),
       status: rest.status ?? TaskStatus.Todo,
       category: rest.category,
+      estimated_start_date: estimated_start_date ? new Date(estimated_start_date) : undefined,
+      estimated_end_date: estimated_end_date ? new Date(estimated_end_date) : undefined,
     };
     return this.tasksService.create(taskData);
   }
@@ -118,6 +122,8 @@ export class TasksResolver {
       tags,
       deadline,
       links,
+      estimated_start_date,
+      estimated_end_date,
       ...rest
     } = updateTaskInput;
 
@@ -138,6 +144,10 @@ export class TasksResolver {
     if (links !== undefined)
       updateData.links = links.map((l) => ({ title: l.title, url: l.url }));
 
+    if (estimated_start_date !== undefined)
+      updateData.estimated_start_date = estimated_start_date ? new Date(estimated_start_date) : undefined;
+    if (estimated_end_date !== undefined)
+      updateData.estimated_end_date = estimated_end_date ? new Date(estimated_end_date) : undefined;
     Object.assign(updateData, rest);
 
     return this.tasksService.update(id, updateData);
