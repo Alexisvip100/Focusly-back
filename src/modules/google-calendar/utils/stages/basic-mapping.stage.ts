@@ -25,6 +25,7 @@ export const BasicMappingStage = (event: GoogleEvent): ProcessedGoogleTask => {
     notes_encrypted: event.description || '',
     deadline: deadline.toISOString(),
     estimated_start_date: start.toISOString(),
+    estimated_end_date: deadline.toISOString(),
     status: 'Scheduled' as ITask['status'],
     priority_level: 3,
     subtasks: [],

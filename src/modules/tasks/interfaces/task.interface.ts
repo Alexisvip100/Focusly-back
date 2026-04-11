@@ -8,7 +8,8 @@ export interface ITask {
   duration?: Date;
   priorityLevel: number;
   category?: string;
-  startDate?: Date;
+  estimated_start_date?: Date;
+  estimated_end_date?: Date;
   deadline: Date;
   status:
     | 'Todo'

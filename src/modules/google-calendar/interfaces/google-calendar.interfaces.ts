@@ -37,6 +37,7 @@ export interface ProcessedGoogleTask {
   notes_encrypted: string;
   deadline: string;
   estimated_start_date: string;
+  estimated_end_date?: string;
   status: ITask['status'];
   priority_level: number;
   subtasks: any[];

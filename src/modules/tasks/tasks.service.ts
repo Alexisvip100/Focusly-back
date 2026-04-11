@@ -266,6 +266,8 @@ export class TasksService {
       completedAt: convertDate(data.completedAt),
       deletedAt: convertDate(data.deletedAt),
       duration: convertDate(data.duration),
+      estimated_start_date: convertDate(data.estimated_start_date),
+      estimated_end_date: convertDate(data.estimated_end_date),
       subtasks: subtasksRaw.map((s) => ({
         title: (s.title as string) || 'Untitled',
         completed: (s.completed as boolean) || false,
