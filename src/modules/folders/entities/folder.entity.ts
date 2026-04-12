@@ -1,5 +1,5 @@
 import { ObjectType, Field, ID } from '@nestjs/graphql';
-import { Workspace } from '../../workspaces/entities/workspace.entity';
+import { Workspace } from '../../workspaces/schemas/workspace.schema';
 
 @ObjectType()
 export class Folder {

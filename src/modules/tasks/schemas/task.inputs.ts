@@ -1,4 +1,5 @@
-import { Field, InputType, Int } from '@nestjs/graphql';
+import { Field, InputType, Int, ID, PartialType } from '@nestjs/graphql';
+import { TaskStatus } from './task-status.enum';
 import {
   IsString,
   IsInt,
@@ -7,9 +8,9 @@ import {
   IsOptional,
   IsBoolean,
   ValidateNested,
+  IsNotEmpty,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { TaskStatus } from '../schemas/task-status.enum';
 
 @InputType()
 export class ParticipantInput {
@@ -184,6 +185,14 @@ export class CreateTaskInput {
 }
 
 @InputType()
+export class UpdateTaskInput extends PartialType(CreateTaskInput) {
+  @Field(() => ID)
+  @IsString()
+  @IsNotEmpty()
+  id: string;
+}
+
+@InputType()
 export class TaskFilterInput {
   @Field(() => TaskStatus, { nullable: true })
   @IsOptional()
@@ -192,7 +201,7 @@ export class TaskFilterInput {
 
   @Field(() => Number, { nullable: true })
   @IsOptional()
-  @IsInt() // Changed to IsInt for consistency with CreateTaskInput, or IsNumber if float allowed? Usually priority is int.
+  @IsInt()
   priorityLevel?: number;
 
   @Field(() => String, { nullable: true })

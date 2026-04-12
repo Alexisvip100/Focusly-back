@@ -3,7 +3,7 @@ import { FirebaseService } from '../../firebase/firebase.service';
 import { ITask } from './interfaces/task.interface';
 import * as admin from 'firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
-import { TaskFilterInput, TaskSortInput } from './dto/create-task.input';
+import { TaskFilterInput, TaskSortInput } from './schemas/task.inputs';
 import { Filter } from 'firebase-admin/firestore';
 
 @Injectable()

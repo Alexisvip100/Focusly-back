@@ -44,4 +44,10 @@ export interface ITask {
   };
   links?: { title: string; url: string }[];
   google_event_id?: string;
+  participants?: {
+    name: string;
+    email: string;
+    avatar?: string;
+    responseStatus?: string;
+  }[];
 }

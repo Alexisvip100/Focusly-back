@@ -1,8 +1,10 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CreateWorkspaceInput } from './dto/create-workspace.input';
-import { UpdateWorkspaceInput } from './dto/update-workspace.input';
+import {
+  CreateWorkspaceInput,
+  UpdateWorkspaceInput,
+} from './schemas/workspace.inputs';
 import { FirebaseService } from '../../firebase/firebase.service';
-import { Workspace } from './entities/workspace.entity';
+import { Workspace } from './schemas/workspace.schema';
 import * as admin from 'firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 
