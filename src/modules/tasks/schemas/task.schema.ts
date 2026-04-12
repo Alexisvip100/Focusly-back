@@ -1,7 +1,22 @@
 import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
 import { Tag } from '../../tags/entities/tag.entity';
 import { TaskStatus } from './task-status.enum';
-import { Workspace } from '../../workspaces/entities/workspace.entity';
+import { Workspace } from '../../workspaces/schemas/workspace.schema';
+
+@ObjectType()
+export class Participant {
+  @Field()
+  name: string;
+
+  @Field()
+  email: string;
+
+  @Field({ nullable: true })
+  avatar?: string;
+
+  @Field({ nullable: true })
+  responseStatus?: string;
+}
 
 @ObjectType()
 export class TaskFilters {
@@ -127,4 +142,7 @@ export class Task {
 
   @Field(() => Date, { name: 'estimated_end_date', nullable: true })
   estimated_end_date?: Date;
+
+  @Field(() => [Participant], { defaultValue: [], nullable: true })
+  participants?: Participant[];
 }

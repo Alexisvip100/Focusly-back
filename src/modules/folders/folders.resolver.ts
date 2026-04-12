@@ -14,7 +14,7 @@ import { CreateFolderInput } from './dto/create-folder.input';
 import { UpdateFolderInput } from './dto/update-folder.input';
 import { GqlAuthGuard } from '../auth/gql-auth.guard';
 import { WorkspacesService } from '../workspaces/workspaces.service';
-import { Workspace } from '../workspaces/entities/workspace.entity';
+import { Workspace } from '../workspaces/schemas/workspace.schema';
 import { ResolveField, Parent } from '@nestjs/graphql';
 
 interface FolderContext {

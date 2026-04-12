@@ -9,12 +9,14 @@ import {
 } from '@nestjs/graphql';
 import { UseGuards, Inject, forwardRef } from '@nestjs/common';
 import { WorkspacesService } from './workspaces.service';
-import { Workspace } from './entities/workspace.entity';
-import { CreateWorkspaceInput } from './dto/create-workspace.input';
-import { UpdateWorkspaceInput } from './dto/update-workspace.input';
+import { Workspace } from './schemas/workspace.schema';
+import {
+  CreateWorkspaceInput,
+  UpdateWorkspaceInput,
+} from './schemas/workspace.inputs';
 import { GqlAuthGuard } from '../auth/gql-auth.guard';
 import { TasksService } from '../tasks/tasks.service';
-import { Task } from '../tasks/entities/task.entity';
+import { Task } from '../tasks/schemas/task.schema';
 import { ResolveField, Parent } from '@nestjs/graphql';
 import { Folder } from '../folders/entities/folder.entity';
 import { FoldersService } from '../folders/folders.service';
@@ -54,7 +56,11 @@ export class WorkspacesResolver {
     @Args('search', { type: () => String, nullable: true }) search?: string,
     @Args('folderId', { type: () => String, nullable: true }) folderId?: string,
   ) {
-    return this.workspacesService.findAll(context.req.user.userId, search, folderId);
+    return this.workspacesService.findAll(
+      context.req.user.userId,
+      search,
+      folderId,
+    );
   }
 
   @Query(() => Workspace, { name: 'workspace' })
@@ -113,7 +119,10 @@ export class WorkspacesResolver {
       return null;
     }
     try {
-      return await this.foldersService.findOne(workspace.folderId, workspace.userId);
+      return await this.foldersService.findOne(
+        workspace.folderId,
+        workspace.userId,
+      );
     } catch (error) {
       return null;
     }

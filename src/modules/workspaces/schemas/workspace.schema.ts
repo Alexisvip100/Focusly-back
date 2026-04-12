@@ -1,5 +1,5 @@
 import { ObjectType, Field, ID } from '@nestjs/graphql';
-import { Task } from '../../tasks/entities/task.entity';
+import { Task } from '../../tasks/schemas/task.schema';
 import { Folder } from '../../folders/entities/folder.entity';
 
 @ObjectType()

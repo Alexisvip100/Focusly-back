@@ -10,16 +10,16 @@ import { UseGuards, Inject, forwardRef } from '@nestjs/common';
 import { TasksService } from './tasks.service';
 import { WorkspacesService } from '../workspaces/workspaces.service';
 
-import { Task } from './entities/task.entity';
-import { Workspace } from '../workspaces/entities/workspace.entity';
-import { TaskStatus } from './entities/task-status.enum';
+import { Task } from './schemas/task.schema';
+import { Workspace } from '../workspaces/schemas/workspace.schema';
+import { TaskStatus } from './schemas/task-status.enum';
 import {
   CreateTaskInput,
   TaskFilterInput,
   SubtaskInput,
   TaskSortInput,
-} from './dto/create-task.input';
-import { UpdateTaskInput } from './dto/update-task.input';
+  UpdateTaskInput,
+} from './schemas/task.inputs';
 import { GqlAuthGuard } from '../auth/gql-auth.guard';
 import { ITask } from './interfaces/task.interface';
 
@@ -78,6 +78,7 @@ export class TasksResolver {
       links,
       estimated_start_date,
       estimated_end_date,
+      participants,
       ...rest
     } = createTaskInput;
 
@@ -100,6 +101,7 @@ export class TasksResolver {
       estimated_end_date: estimated_end_date
         ? new Date(estimated_end_date)
         : undefined,
+      participants: participants?.map((p) => ({ ...p })),
     };
     return this.tasksService.create(taskData);
   }
@@ -128,6 +130,7 @@ export class TasksResolver {
       links,
       estimated_start_date,
       estimated_end_date,
+      participants,
       ...rest
     } = updateTaskInput;
 
@@ -156,6 +159,8 @@ export class TasksResolver {
       updateData.estimated_end_date = estimated_end_date
         ? new Date(estimated_end_date)
         : undefined;
+    if (participants !== undefined)
+      updateData.participants = participants.map((p) => ({ ...p }));
     Object.assign(updateData, rest);
 
     return this.tasksService.update(id, updateData);
