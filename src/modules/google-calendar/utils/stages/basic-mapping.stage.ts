@@ -57,6 +57,7 @@ export const BasicMappingStage = (event: GoogleEvent): ProcessedGoogleTask => {
     tags: [],
     links: [],
     estimate_timer: Math.round((deadline.getTime() - start.getTime()) / 60000),
+    task_type: 'GoogleTask',
     is_all_day: isAllDay,
     location: event.location,
     created_at: new Date().toISOString(),

@@ -164,6 +164,11 @@ export class CreateTaskInput {
   @Field({ nullable: true })
   @IsOptional()
   @IsString()
+  task_type?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
   google_event_id?: string;
 
   @Field({ nullable: true })

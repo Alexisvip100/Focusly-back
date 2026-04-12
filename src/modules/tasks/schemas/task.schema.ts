@@ -134,6 +134,9 @@ export class Task {
   @Field(() => [TaskLink], { defaultValue: [] })
   links: TaskLink[];
 
+  @Field({ name: 'task_type', nullable: true })
+  task_type?: string;
+
   @Field({ name: 'google_event_id', nullable: true })
   googleEventId?: string;
 
