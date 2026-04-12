@@ -95,6 +95,7 @@ export class TasksResolver {
       deadline: new Date(createTaskInput.deadline),
       status: rest.status ?? TaskStatus.Todo,
       category: rest.category,
+      task_type: (rest.task_type as ITask['task_type']) || 'PlatformTask',
       estimated_start_date: estimated_start_date
         ? new Date(estimated_start_date)
         : undefined,

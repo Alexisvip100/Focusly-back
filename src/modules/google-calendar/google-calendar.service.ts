@@ -80,18 +80,19 @@ export class GoogleCalendarService {
   }
 
   async deleteEvent(userId: string, eventId: string) {
+    console.log(`[GOOGLE CAL] Deleting event ${eventId} for user ${userId}`);
     const { access_token } =
       await this.authService.refreshGoogleAccessToken(userId);
-    const response = await fetch(
-      `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`,
-      {
-        method: 'DELETE',
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
+    const url = `https://www.googleapis.com/calendar/v3/calendars/primary/events/${eventId}`;
+    const response = await fetch(url, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${access_token}`,
       },
-    );
+    });
     if (!response.ok && response.status !== 404) {
+      const body = await response.text();
+      console.error(`[GOOGLE CAL] Delete failed (${response.status}):`, body);
       throw new InternalServerErrorException('Failed to delete Google event');
     }
   }

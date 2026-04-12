@@ -5,12 +5,16 @@ import * as admin from 'firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 import { TaskFilterInput, TaskSortInput } from './schemas/task.inputs';
 import { Filter } from 'firebase-admin/firestore';
+import { GoogleCalendarService } from '../google-calendar/google-calendar.service';
 
 @Injectable()
 export class TasksService {
   private collection: admin.firestore.CollectionReference;
 
-  constructor(private firebaseService: FirebaseService) {
+  constructor(
+    private firebaseService: FirebaseService,
+    private googleCalendarService: GoogleCalendarService,
+  ) {
     this.collection = this.firebaseService.db.collection('tasks');
   }
 
@@ -186,7 +190,41 @@ export class TasksService {
 
   async delete(id: string): Promise<void> {
     const docRef = this.collection.doc(id);
+    const doc = await docRef.get();
 
+    if (!doc.exists) {
+      throw new NotFoundException(`Task with ID ${id} not found`);
+    }
+
+    const taskData = doc.data() as ITask;
+    const taskType = taskData.task_type || 'PlatformTask';
+
+    console.log(`[DELETE] Deleting ${taskType} with ID: ${id}`);
+
+    // If this PlatformTask was synced with Google Calendar, also delete the event there
+    if (
+      taskType === 'PlatformTask' &&
+      taskData.google_event_id &&
+      taskData.userId
+    ) {
+      try {
+        console.log(
+          `[DELETE] PlatformTask has google_event_id: ${taskData.google_event_id}, syncing deletion to Google Calendar`,
+        );
+        await this.googleCalendarService.deleteEvent(
+          taskData.userId,
+          taskData.google_event_id,
+        );
+      } catch (error) {
+        console.error(
+          '[DELETE] Failed to delete synced Google Calendar event:',
+          error instanceof Error ? error.message : String(error),
+        );
+        // Continue with local deletion even if Google fails
+      }
+    }
+
+    // Clean up workspace references
     const workspacesSnapshot = await this.firebaseService.db
       .collection('workspaces')
       .where('taskId', '==', id)
@@ -204,12 +242,43 @@ export class TasksService {
     }
 
     await docRef.delete();
+    console.log(`[DELETE] ${taskType} with ID: ${id} deleted successfully`);
   }
 
   async deleteWorkspaceTasks(workspaceId: string): Promise<void> {
     const snapshot = await this.collection
       .where('workspaceId', '==', workspaceId)
       .get();
+
+    if (snapshot.empty) return;
+
+    // Sync deletions with Google Calendar for PlatformTasks that were synced
+    for (const doc of snapshot.docs) {
+      const taskData = doc.data() as ITask;
+      const taskType = taskData.task_type || 'PlatformTask';
+
+      if (
+        taskType === 'PlatformTask' &&
+        taskData.google_event_id &&
+        taskData.userId
+      ) {
+        try {
+          console.log(
+            `[DELETE] Syncing workspace task deletion to Google Calendar: ${taskData.google_event_id}`,
+          );
+          await this.googleCalendarService.deleteEvent(
+            taskData.userId,
+            taskData.google_event_id,
+          );
+        } catch (error) {
+          console.error(
+            '[DELETE] Failed to delete synced Google Calendar event:',
+            error instanceof Error ? error.message : String(error),
+          );
+        }
+      }
+    }
+
     const batch = this.firebaseService.db.batch();
     snapshot.docs.forEach((doc) => {
       batch.delete(doc.ref);

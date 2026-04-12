@@ -43,6 +43,7 @@ export interface ITask {
     status: string[];
   };
   links?: { title: string; url: string }[];
+  task_type?: 'PlatformTask' | 'GoogleTask';
   google_event_id?: string;
   participants?: {
     name: string;
