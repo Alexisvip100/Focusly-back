@@ -213,6 +213,19 @@ export class TaskFilterInput {
   @IsOptional()
   @IsString()
   category?: string;
+<<<<<<< HEAD
+=======
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  startDate?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  endDate?: string;
+>>>>>>> 4a1f066 (fix: add delete)
 }
 
 @InputType()

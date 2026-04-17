@@ -19,6 +19,24 @@ export class TasksService {
   }
 
   async create(taskData: Partial<ITask>): Promise<ITask> {
+    // If google_event_id is present, check for existing task to avoid duplicates (Upsert)
+    if (taskData.google_event_id && taskData.userId) {
+      const existing = await this.collection
+        .where('userId', '==', taskData.userId)
+        .where('google_event_id', '==', taskData.google_event_id)
+        .where('deletedAt', '==', null)
+        .limit(1)
+        .get();
+
+      if (!existing.empty) {
+        const doc = existing.docs[0];
+        console.log(
+          `[UPSERT] Task with google_event_id ${taskData.google_event_id} already exists (ID: ${doc.id}). Updating instead of creating.`,
+        );
+        return this.update(doc.id, taskData);
+      }
+    }
+
     const id = uuidv4();
     const docRef = this.collection.doc(id);
     const now = new Date();
@@ -107,6 +125,16 @@ export class TasksService {
       }
       if (filters.category) {
         fireStoreFilters.push(Filter.where('category', '==', filters.category));
+      }
+      if (filters.startDate) {
+        fireStoreFilters.push(
+          Filter.where('deadline', '>=', new Date(filters.startDate)),
+        );
+      }
+      if (filters.endDate) {
+        fireStoreFilters.push(
+          Filter.where('deadline', '<=', new Date(filters.endDate)),
+        );
       }
     }
 
@@ -241,8 +269,22 @@ export class TasksService {
       await batch.commit();
     }
 
+<<<<<<< Updated upstream
     await docRef.delete();
+<<<<<<< HEAD
     console.log(`[DELETE] ${taskType} with ID: ${id} deleted successfully`);
+=======
+=======
+    // Finally, perform a soft delete by setting deletedAt
+    await docRef.update({
+      deletedAt: admin.firestore.FieldValue.serverTimestamp(),
+      updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    console.log(
+      `[DELETE] ${taskType} with ID: ${id} soft-deleted successfully`,
+    );
+>>>>>>> Stashed changes
+>>>>>>> 4a1f066 (fix: add delete)
   }
 
   async deleteWorkspaceTasks(workspaceId: string): Promise<void> {
@@ -281,7 +323,10 @@ export class TasksService {
 
     const batch = this.firebaseService.db.batch();
     snapshot.docs.forEach((doc) => {
-      batch.delete(doc.ref);
+      batch.update(doc.ref, {
+        deletedAt: admin.firestore.FieldValue.serverTimestamp(),
+        updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
     });
     await batch.commit();
   }
