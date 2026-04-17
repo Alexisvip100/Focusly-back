@@ -268,13 +268,6 @@ export class TasksService {
       });
       await batch.commit();
     }
-
-<<<<<<< Updated upstream
-    await docRef.delete();
-<<<<<<< HEAD
-    console.log(`[DELETE] ${taskType} with ID: ${id} deleted successfully`);
-=======
-=======
     // Finally, perform a soft delete by setting deletedAt
     await docRef.update({
       deletedAt: admin.firestore.FieldValue.serverTimestamp(),
@@ -283,8 +276,6 @@ export class TasksService {
     console.log(
       `[DELETE] ${taskType} with ID: ${id} soft-deleted successfully`,
     );
->>>>>>> Stashed changes
->>>>>>> 4a1f066 (fix: add delete)
   }
 
   async deleteWorkspaceTasks(workspaceId: string): Promise<void> {
