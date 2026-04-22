@@ -63,6 +63,21 @@ export class TasksService {
     return task;
   }
 
+  /**
+   * Retrieves all google_event_ids for tasks that have not been deleted.
+   * Useful for deduplication when fetching events from Google Calendar.
+   */
+  async getSyncedGoogleIds(userId: string): Promise<string[]> {
+    const snapshot = await this.collection
+      .where('userId', '==', userId)
+      .where('deletedAt', '==', null)
+      .get();
+
+    return snapshot.docs
+      .map((doc) => doc.data().google_event_id as string)
+      .filter(Boolean);
+  }
+
   async findAll(): Promise<ITask[]> {
     const snapshot = await this.collection.where('deletedAt', '==', null).get();
     return snapshot.docs.map((doc) => this.mapToTask(doc.data()));

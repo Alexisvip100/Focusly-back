@@ -13,11 +13,31 @@ import {
 import { GoogleCalendarService } from './google-calendar.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { processGoogleEvent } from './utils/google-calendar.pipeline';
+import { TasksService } from '../tasks/tasks.service';
+import { Inject, forwardRef } from '@nestjs/common';
+
+/**
+ * Normalizes a Google Event ID by removing leading underscores.
+ * Matches the logic used in the frontend mapper.
+ */
+const normalizeId = (id: string | null | undefined): string => {
+  if (!id) return '';
+  return id.replace(/^_+/, '');
+};
+
+const getBaseId = (id: string | null | undefined): string => {
+  if (!id) return '';
+  return normalizeId(id).split('_')[0];
+};
 
 @Controller('google-calendar')
 @UseGuards(JwtAuthGuard)
 export class GoogleCalendarController {
-  constructor(private readonly googleCalendarService: GoogleCalendarService) {}
+  constructor(
+    private readonly googleCalendarService: GoogleCalendarService,
+    @Inject(forwardRef(() => TasksService))
+    private readonly tasksService: TasksService,
+  ) {}
 
   @Get('events')
   async getEvents(
@@ -37,9 +57,20 @@ export class GoogleCalendarController {
 
     if (!rawData.items) return [];
 
-    // Process each event through the pipeline
+    // 1. Get already synced Google Event IDs from the database
+    const syncedIds = await this.tasksService.getSyncedGoogleIds(userId);
+    const normalizedSyncedIds = new Set(syncedIds.map((id) => normalizeId(id)));
+
+    // 2. Filter out events that already exist in our DB
+    const filteredItems = rawData.items.filter((item) => {
+      const normalizedEventId = normalizeId(item.id as string);
+      const baseEventId = getBaseId(item.id as string);
+      return !normalizedSyncedIds.has(normalizedEventId) && !normalizedSyncedIds.has(baseEventId);
+    });
+
+    // 3. Process the remaining events through the pipeline
     const processedEvents = await Promise.all(
-      rawData.items.map((event) => processGoogleEvent(event)),
+      filteredItems.map((event) => processGoogleEvent(event)),
     );
 
     return processedEvents;
