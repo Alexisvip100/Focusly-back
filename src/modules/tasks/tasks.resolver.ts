@@ -96,6 +96,8 @@ export class TasksResolver {
       status: rest.status ?? TaskStatus.Todo,
       category: rest.category,
       task_type: (rest.task_type as ITask['task_type']) || 'PlatformTask',
+      source: rest.source as ITask['source'],
+      sync_status: rest.sync_status as ITask['sync_status'],
       estimated_start_date: estimated_start_date
         ? new Date(estimated_start_date)
         : undefined,
@@ -162,7 +164,15 @@ export class TasksResolver {
         : undefined;
     if (participants !== undefined)
       updateData.participants = participants.map((p) => ({ ...p }));
-    Object.assign(updateData, rest);
+
+    if (rest.task_type !== undefined)
+      updateData.task_type = rest.task_type as ITask['task_type'];
+    if (rest.source !== undefined)
+      updateData.source = rest.source as ITask['source'];
+    if (rest.sync_status !== undefined)
+      updateData.sync_status = rest.sync_status as ITask['sync_status'];
+    if (rest.status !== undefined) updateData.status = rest.status;
+    if (rest.category !== undefined) updateData.category = rest.category;
 
     return this.tasksService.update(id, updateData);
   }

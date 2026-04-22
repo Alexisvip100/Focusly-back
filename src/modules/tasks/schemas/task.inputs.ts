@@ -181,6 +181,16 @@ export class CreateTaskInput {
   @IsString()
   estimated_end_date?: string;
 
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  source?: string;
+
+  @Field({ nullable: true })
+  @IsOptional()
+  @IsString()
+  sync_status?: string;
+
   @Field(() => [ParticipantInput], { nullable: true })
   @IsOptional()
   @IsArray()

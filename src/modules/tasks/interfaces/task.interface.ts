@@ -45,6 +45,8 @@ export interface ITask {
   links?: { title: string; url: string }[];
   task_type?: 'PlatformTask' | 'GoogleTask';
   google_event_id?: string;
+  source?: 'google' | 'platform';
+  sync_status?: 'synced' | 'pending' | 'error';
   participants?: {
     name: string;
     email: string;
