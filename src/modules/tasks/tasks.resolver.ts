@@ -78,7 +78,7 @@ export class TasksResolver {
       links,
       estimated_start_date,
       estimated_end_date,
-      participants,
+      collaborators,
       ...rest
     } = createTaskInput;
 
@@ -104,7 +104,7 @@ export class TasksResolver {
       estimated_end_date: estimated_end_date
         ? new Date(estimated_end_date)
         : undefined,
-      participants: participants?.map((p) => ({ ...p })),
+      collaborators: collaborators?.map((p) => ({ ...p })),
     };
     return this.tasksService.create(taskData);
   }
@@ -133,7 +133,7 @@ export class TasksResolver {
       links,
       estimated_start_date,
       estimated_end_date,
-      participants,
+      collaborators,
       ...rest
     } = updateTaskInput;
 
@@ -162,8 +162,8 @@ export class TasksResolver {
       updateData.estimated_end_date = estimated_end_date
         ? new Date(estimated_end_date)
         : undefined;
-    if (participants !== undefined)
-      updateData.participants = participants.map((p) => ({ ...p }));
+    if (collaborators !== undefined)
+      updateData.collaborators = collaborators.map((p) => ({ ...p }));
 
     if (rest.task_type !== undefined)
       updateData.task_type = rest.task_type as ITask['task_type'];

@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { TasksService } from '../tasks/tasks.service';
 import { FocusSessionsService } from '../focus-sessions/focus-sessions.service';
+import { UsersService } from '../users/users.service';
 import {
   InsightsResponse,
   ProductivityTrend,
@@ -8,18 +9,22 @@ import {
   TimeDistribution,
 } from './schemas/insights.schema';
 import { TaskStatus } from '../tasks/schemas/task-status.enum';
+import { ITask } from '../tasks/interfaces/task.interface';
+import { IFocusSession } from '../focus-sessions/interfaces/focus-session.interface';
 
 @Injectable()
 export class InsightsService {
   constructor(
     private readonly tasksService: TasksService,
     private readonly focusSessionsService: FocusSessionsService,
+    private readonly usersService: UsersService,
   ) {}
 
   async getInsights(userId: string, filter: string): Promise<InsightsResponse> {
-    // 1. Fetch all tasks for user (we might need a date range filter in tasksService later, but for now fetch all and filter in memory)
-    // Optimization: In real app, pass date range to DB query.
     const allTasks = await this.tasksService.findAllByUser(userId);
+    const allFocusSessions =
+      await this.focusSessionsService.findAllByUser(userId);
+    const user = await this.usersService.findOne(userId);
 
     // 2. Determine Date Range based on filter
     const startDate = new Date();
@@ -43,11 +48,9 @@ export class InsightsService {
 
     // 3. Filter Tasks
     const filteredTasks = allTasks.filter((t) => {
-      // For general stats, maybe we look at tasks active in this period?
-      // Let's use UpdatedAt for activity, or CreatedAt for new tasks.
-      // For "Focus Hours", we need work logs. Since we don't have them, we use real_timer on tasks updated/completed in range?
-      // Limitation: simpler to just use tasks *created* or *updated* after startDate.
-      return new Date(t.updatedAt) >= startDate;
+      const taskDate = new Date(t.updatedAt || t.createdAt);
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+      return taskDate >= startDate || t.status !== TaskStatus.Done;
     });
 
     // 4. Calculate Metrics
@@ -81,61 +84,26 @@ export class InsightsService {
       trend: 'up',
     };
 
-    // Energy Score (Mocked for now as we don't store energy data)
-    const energyScore: StatCardValue = {
-      value: '78/100',
-      change: '+2 pts',
-      trend: 'up',
-    };
+    const energyScore = this.calculateEnergyScore(filteredTasks);
+    const goldenWindow = this.calculateGoldenWindow(
+      allFocusSessions,
+      user?.settings?.workHoursConfig,
+    );
+    const breakStats = this.calculateBreakHours(allFocusSessions);
 
-    // Simple bucket
-    const goldenWindow: StatCardValue = {
-      value: '9 AM - 11 AM',
-      change: 'Most productive time',
-      trend: 'neutral',
-    };
+    // 5. Productivity Trends (Real calculation)
+    const productivityTrends = this.calculateProductivityTrends(
+      allTasks,
+      allFocusSessions,
+      filter,
+    );
 
-    // Productivity Trends (Mocked or simple distribution)
-    // Generate last 7 days keys if Weekly
-    const trends: ProductivityTrend[] = [];
-    if (filter === 'Weekly') {
-      const days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
-      // Just mock some variation based on actual data to make it look real-ish
-      days.forEach((day) => {
-        trends.push({
-          day,
-          actual: Math.floor(Math.random() * 8) + 2, // Mock 2-10 hours
-          planned: Math.floor(Math.random() * 8) + 2,
-        });
-      });
-    }
-
-    // Time Distribution by Category
-    const categoryMap = new Map<string, number>();
-    filteredTasks.forEach((t) => {
-      const cat = t.category || 'Uncategorized';
-      const current = categoryMap.get(cat) || 0;
-      categoryMap.set(cat, current + (t.realTimer || 0));
-    });
-
-    const timeDistribution: TimeDistribution[] = [];
-    const colors = [
-      '#3b82f6',
-      '#6366f1',
-      '#8b5cf6',
-      '#64748b',
-      '#ef4444',
-      '#10b981',
-    ];
-    let colorIdx = 0;
-    categoryMap.forEach((val, key) => {
-      timeDistribution.push({
-        name: key,
-        value: val, // Raw minutes, frontend can convert to %
-        color: colors[colorIdx % colors.length],
-      });
-      colorIdx++;
-    });
+    // 6. Time Distribution by Category (Real calculation including breaks)
+    const breakMinutes = this.extractBreakMinutes(breakStats.value);
+    const timeDistribution = this.calculateTimeDistribution(
+      filteredTasks,
+      breakMinutes,
+    );
 
     const heatmap = await this.calculateHeatmap(userId);
 
@@ -144,9 +112,347 @@ export class InsightsService {
       taskCompletion,
       energyScore,
       goldenWindow,
-      productivityTrends: trends,
+      breakHours: breakStats,
+      productivityTrends,
       timeDistribution,
       heatmap,
+    };
+  }
+
+  private extractBreakMinutes(breakValue: string): number {
+    // Value is in format "Xh Ym"
+    const match = breakValue.match(/(\d+)h\s+(\d+)m/);
+    if (match) {
+      return parseInt(match[1]) * 60 + parseInt(match[2]);
+    }
+    return 0;
+  }
+
+  private calculateProductivityTrends(
+    tasks: ITask[],
+    sessions: IFocusSession[],
+    filter: string,
+  ): ProductivityTrend[] {
+    if (filter === 'Daily') {
+      return this.buildDailyTrends(tasks, sessions);
+    } else if (filter === 'Monthly') {
+      return this.buildMonthlyTrends(tasks, sessions);
+    }
+    return this.buildWeeklyTrends(tasks, sessions);
+  }
+
+  /**
+   * Daily: Group by hour of the day (8AM to 10PM)
+   */
+  private buildDailyTrends(
+    tasks: ITask[],
+    sessions: IFocusSession[],
+  ): ProductivityTrend[] {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const trends: ProductivityTrend[] = [];
+    for (let hour = 8; hour <= 22; hour++) {
+      const label =
+        hour === 12 ? '12PM' : hour > 12 ? `${hour - 12}PM` : `${hour}AM`;
+
+      // Planned: tasks with deadline today, estimate distributed across work hours
+      const plannedMins = tasks.reduce((acc, t) => {
+        const d = new Date(t.deadline || t.createdAt);
+        if (this.isSameDay(d, today) && t.estimateTimer) {
+          // Distribute equally across 8AM-5PM (9 working hours)
+          return acc + (t.estimateTimer || 0) / 9;
+        }
+        return acc;
+      }, 0);
+
+      // Actual: sessions that started in this hour today
+      const actualMins = sessions.reduce((acc, s) => {
+        const sDate = new Date(s.startedAt);
+        if (this.isSameDay(sDate, today) && sDate.getHours() === hour) {
+          return acc + (s.durationMinutes || 0);
+        }
+        return acc;
+      }, 0);
+
+      trends.push({
+        label,
+        actual: Number((actualMins / 60).toFixed(1)),
+        planned: Number((plannedMins / 60).toFixed(1)),
+      });
+    }
+    return trends;
+  }
+
+  /**
+   * Weekly: Group by day of the week (MON - SUN)
+   */
+  private buildWeeklyTrends(
+    tasks: ITask[],
+    sessions: IFocusSession[],
+  ): ProductivityTrend[] {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const monday = new Date(now);
+    monday.setDate(now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1));
+    monday.setHours(0, 0, 0, 0);
+
+    const trends: ProductivityTrend[] = [];
+    const dayNames = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(monday);
+      date.setDate(monday.getDate() + i);
+
+      const plannedMins = tasks.reduce((acc, t) => {
+        const d = new Date(t.deadline || t.createdAt);
+        if (this.isSameDay(d, date)) {
+          return acc + (t.estimateTimer || 0);
+        }
+        return acc;
+      }, 0);
+
+      const actualMins = sessions.reduce((acc, s) => {
+        const sDate = new Date(s.startedAt);
+        if (this.isSameDay(sDate, date)) {
+          return acc + (s.durationMinutes || 0);
+        }
+        return acc;
+      }, 0);
+
+      trends.push({
+        label: dayNames[i],
+        actual: Number((actualMins / 60).toFixed(1)),
+        planned: Number((plannedMins / 60).toFixed(1)),
+      });
+    }
+    return trends;
+  }
+
+  /**
+   * Monthly: Group by week of the month (W1, W2, W3, W4, W5)
+   */
+  private buildMonthlyTrends(
+    tasks: ITask[],
+    sessions: IFocusSession[],
+  ): ProductivityTrend[] {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+
+    const trends: ProductivityTrend[] = [];
+    let weekStart = new Date(firstDay);
+    let weekNum = 1;
+
+    while (weekStart <= lastDay) {
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(Math.min(weekStart.getDate() + 6, lastDay.getDate()));
+
+      const label = `W${weekNum} (${weekStart.getDate()}-${weekEnd.getDate()})`;
+
+      const plannedMins = tasks.reduce((acc, t) => {
+        const d = new Date(t.deadline || t.createdAt);
+        if (d >= weekStart && d <= weekEnd && d.getMonth() === month) {
+          return acc + (t.estimateTimer || 0);
+        }
+        return acc;
+      }, 0);
+
+      const actualMins = sessions.reduce((acc, s) => {
+        const sDate = new Date(s.startedAt);
+        if (
+          sDate >= weekStart &&
+          sDate <= weekEnd &&
+          sDate.getMonth() === month
+        ) {
+          return acc + (s.durationMinutes || 0);
+        }
+        return acc;
+      }, 0);
+
+      trends.push({
+        label,
+        actual: Number((actualMins / 60).toFixed(1)),
+        planned: Number((plannedMins / 60).toFixed(1)),
+      });
+
+      weekStart = new Date(weekEnd);
+      weekStart.setDate(weekEnd.getDate() + 1);
+      weekNum++;
+    }
+
+    return trends;
+  }
+
+  private isSameDay(a: Date, b: Date): boolean {
+    return (
+      a.getFullYear() === b.getFullYear() &&
+      a.getMonth() === b.getMonth() &&
+      a.getDate() === b.getDate()
+    );
+  }
+
+  private calculateTimeDistribution(
+    tasks: ITask[],
+    breakMinutes: number,
+  ): TimeDistribution[] {
+    const categoryMap = new Map<string, number>();
+
+    // Initialize standard categories
+    categoryMap.set('Deep Work', 0);
+    categoryMap.set('Meetings', 0);
+    categoryMap.set('Admin/Misc', 0);
+
+    tasks.forEach((t) => {
+      let cat = 'Deep Work';
+      const rawCat = (t.category || '').toLowerCase();
+
+      if (rawCat.includes('meet')) {
+        cat = 'Meetings';
+      } else if (rawCat.includes('admin') || rawCat.includes('misc')) {
+        cat = 'Admin/Misc';
+      }
+
+      categoryMap.set(cat, (categoryMap.get(cat) || 0) + (t.realTimer || 0));
+    });
+
+    // Add calculated breaks
+    categoryMap.set('Rest/Breaks', breakMinutes);
+
+    const colors: Record<string, string> = {
+      'Deep Work': '#3b82f6',
+      Meetings: '#6366f1',
+      'Admin/Misc': '#8b5cf6',
+      'Rest/Breaks': '#1e293b',
+    };
+
+    const distribution: TimeDistribution[] = [];
+    categoryMap.forEach((mins, name) => {
+      distribution.push({
+        name,
+        value: mins,
+        color: colors[name] || '#64748b',
+      });
+    });
+
+    return distribution;
+  }
+
+  private calculateEnergyScore(tasks: ITask[]): StatCardValue {
+    if (tasks.length === 0) {
+      return { value: 'N/A', change: '0 pts', trend: 'neutral' };
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
+    const completed = tasks.filter((t) => t.status === TaskStatus.Done);
+    const completionRate = completed.length / tasks.length;
+
+    let efficiencySum = 0;
+    let tasksWithTime = 0;
+    completed.forEach((t) => {
+      const est = t.estimateTimer || 0;
+      const real = t.realTimer || 0;
+      if (est > 0 && real > 0) {
+        const eff = Math.min(est / real, 1.5); // Cap efficiency
+        efficiencySum += eff;
+        tasksWithTime++;
+      }
+    });
+
+    const efficiency = tasksWithTime > 0 ? efficiencySum / tasksWithTime : 0.8;
+    const rawScore = completionRate * 60 + efficiency * 40;
+    const score = Math.min(Math.max(Math.round(rawScore), 0), 100);
+
+    return {
+      value: `${score}/100`,
+      change: '+2 pts',
+      trend: 'up',
+    };
+  }
+
+  private calculateGoldenWindow(
+    sessions: IFocusSession[],
+    workHours?: Record<string, any>,
+  ): StatCardValue {
+    if (sessions.length === 0) {
+      // Use values from onboarding/settings if available, otherwise default
+      const start = (workHours?.startTime as string) || '09:00';
+      const end = (workHours?.endTime as string) || '11:00';
+      return {
+        value: `${start} - ${end}`,
+        change: 'Base on your profile',
+        trend: 'neutral',
+      };
+    }
+
+    const hourStats = new Array(24).fill(0);
+    sessions.forEach((s) => {
+      const start = new Date(s.startedAt);
+      const hour = start.getHours();
+      hourStats[hour] += s.durationMinutes || 0;
+    });
+
+    let maxMinutes = 0;
+    let bestStartHour = 9;
+
+    for (let i = 0; i < 23; i++) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+      const windowSum = hourStats[i] + hourStats[i + 1];
+      if (windowSum > maxMinutes) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        maxMinutes = windowSum;
+        bestStartHour = i;
+      }
+    }
+
+    const format = (h: number) => {
+      const hh = h % 24;
+      return `${hh > 12 ? hh - 12 : hh === 0 ? 12 : hh} ${hh >= 12 ? 'PM' : 'AM'}`;
+    };
+
+    return {
+      value: `${format(bestStartHour)} - ${format(bestStartHour + 2)}`,
+      change: 'Most productive period',
+      trend: 'neutral',
+    };
+  }
+
+  private calculateBreakHours(sessions: IFocusSession[]): StatCardValue {
+    if (sessions.length < 2) {
+      return { value: '0h 0m', change: '0%', trend: 'neutral' };
+    }
+
+    // Sort by start date
+    const sorted = [...sessions].sort(
+      (a, b) =>
+        new Date(a.startedAt).getTime() - new Date(b.startedAt).getTime(),
+    );
+
+    let breakMinutes = 0;
+    for (let i = 0; i < sorted.length - 1; i++) {
+      const currentEnd =
+        new Date(sorted[i].startedAt).getTime() +
+        (sorted[i].durationMinutes || 0) * 60 * 1000;
+      const nextStart = new Date(sorted[i + 1].startedAt).getTime();
+
+      const gapMs = nextStart - currentEnd;
+      const gapMins = gapMs / (1000 * 60);
+
+      // Gap between 15 min and 2 hours is likely a break
+      if (gapMins >= 15 && gapMins <= 120) {
+        breakMinutes += gapMins;
+      }
+    }
+
+    const hours = Math.floor(breakMinutes / 60);
+    const mins = Math.round(breakMinutes % 60);
+
+    return {
+      value: `${hours}h ${mins}m`,
+      change: 'Calculated from gaps',
+      trend: 'neutral',
     };
   }
 

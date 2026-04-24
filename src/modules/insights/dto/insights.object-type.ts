@@ -15,7 +15,7 @@ export class StatCardValue {
 @ObjectType()
 export class ProductivityTrend {
   @Field()
-  label: string; // "MON", "W1 (1-7)", "9AM" — depends on filter
+  day: string; // "MON", "TUE"
 
   @Field(() => Float)
   actual: number;
@@ -61,9 +61,6 @@ export class InsightsResponse {
 
   @Field(() => StatCardValue)
   goldenWindow: StatCardValue;
-
-  @Field(() => StatCardValue)
-  breakHours: StatCardValue;
 
   @Field(() => [ProductivityTrend])
   productivityTrends: ProductivityTrend[];

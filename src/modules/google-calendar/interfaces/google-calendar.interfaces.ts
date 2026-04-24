@@ -20,6 +20,7 @@ export interface GoogleEvent {
     }[];
   };
   attendees?: {
+    displayName?: string;
     email?: string;
     responseStatus?: string;
   }[];
@@ -46,7 +47,12 @@ export interface ProcessedGoogleTask {
   links: { title: string; url: string }[];
   estimate_timer?: number;
   task_type?: 'PlatformTask' | 'GoogleTask';
-  participants?: { email: string; responseStatus?: string; avatar?: string }[];
+  collaborators?: {
+    name?: string;
+    email: string;
+    responseStatus?: string;
+    avatar?: string;
+  }[];
   organizer_email?: string;
   location?: string;
   is_all_day: boolean;

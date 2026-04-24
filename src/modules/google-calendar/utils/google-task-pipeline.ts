@@ -47,7 +47,7 @@ export interface ProcessedGoogleTask {
   tags: any[];
   links: { title: string; url: string }[];
   estimate_timer?: number;
-  participants?: { email: string; responseStatus?: string; avatar?: string }[];
+  collaborators?: { email: string; responseStatus?: string; avatar?: string }[];
   organizer_email?: string;
   created_at: string;
   updated_at: string;
@@ -120,7 +120,7 @@ export const googleTaskPipeline = new Pipeline<
       estimate_timer: Math.round(
         (deadline.getTime() - start.getTime()) / 60000,
       ),
-      participants: event.attendees?.map((a) => ({
+      collaborators: event.attendees?.map((a) => ({
         email: a.email || '',
         responseStatus: a.responseStatus,
         avatar: `https://ui-avatars.com/api/?name=${encodeURIComponent(a.email || 'User')}&background=random&color=fff`,

@@ -12,10 +12,11 @@ import { Type } from 'class-transformer';
 import { TaskStatus } from '../schemas/task-status.enum';
 
 @InputType()
-export class ParticipantInput {
-  @Field()
+export class CollaboratorInput {
+  @Field(() => String, { nullable: true })
+  @IsOptional()
   @IsString()
-  name: string;
+  name?: string;
 
   @Field()
   @IsString()
@@ -175,12 +176,12 @@ export class CreateTaskInput {
   @IsString()
   estimated_end_date?: string;
 
-  @Field(() => [ParticipantInput], { nullable: true })
+  @Field(() => [CollaboratorInput], { nullable: true })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ParticipantInput)
-  participants?: ParticipantInput[];
+  @Type(() => CollaboratorInput)
+  collaborators?: CollaboratorInput[];
 }
 
 @InputType()

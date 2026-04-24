@@ -399,6 +399,7 @@ export class TasksService {
         deadline: convertDate(s.deadline),
         category: s.category as string | undefined,
       })),
+      collaborators: (data.collaborators as any[]) || [],
     } as ITask;
   }
 }

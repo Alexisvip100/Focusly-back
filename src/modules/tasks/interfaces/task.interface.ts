@@ -47,8 +47,8 @@ export interface ITask {
   google_event_id?: string;
   source?: 'google' | 'platform';
   sync_status?: 'synced' | 'pending' | 'error';
-  participants?: {
-    name: string;
+  collaborators?: {
+    name?: string;
     email: string;
     avatar?: string;
     responseStatus?: string;

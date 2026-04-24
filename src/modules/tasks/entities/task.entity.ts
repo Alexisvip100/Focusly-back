@@ -1,22 +1,7 @@
 import { Field, ID, Int, ObjectType } from '@nestjs/graphql';
 import { Tag } from '../../tags/entities/tag.entity';
 import { TaskStatus } from './task-status.enum';
-import { Workspace } from '../../workspaces/schemas/workspace.schema';
-
-@ObjectType()
-export class Collaborator {
-  @Field({ nullable: true })
-  name?: string;
-
-  @Field()
-  email: string;
-
-  @Field({ nullable: true })
-  avatar?: string;
-
-  @Field({ nullable: true })
-  responseStatus?: string;
-}
+import { Workspace } from '../../workspaces/entities/workspace.entity';
 
 @ObjectType()
 export class TaskFilters {
@@ -61,6 +46,9 @@ export class Subtask {
 
   @Field(() => [TaskLink], { defaultValue: [] })
   links: TaskLink[];
+
+  @Field(() => [Collaborator], { defaultValue: [], nullable: true })
+  collaborators?: Collaborator[];
 }
 
 @ObjectType()
@@ -70,6 +58,18 @@ export class TaskLink {
 
   @Field()
   url: string;
+}
+
+@ObjectType()
+export class Collaborator {
+  @Field()
+  email: string;
+
+  @Field({ nullable: true })
+  name?: string;
+
+  @Field({ nullable: true })
+  avatar?: string;
 }
 
 @ObjectType()
@@ -134,18 +134,9 @@ export class Task {
   @Field(() => [TaskLink], { defaultValue: [] })
   links: TaskLink[];
 
-  @Field({ name: 'task_type', nullable: true })
-  task_type?: string;
+  @Field(() => [Collaborator], { defaultValue: [], nullable: true })
+  collaborators?: Collaborator[];
 
   @Field({ name: 'google_event_id', nullable: true })
   googleEventId?: string;
-
-  @Field(() => Date, { name: 'estimated_start_date', nullable: true })
-  estimated_start_date?: Date;
-
-  @Field(() => Date, { name: 'estimated_end_date', nullable: true })
-  estimated_end_date?: Date;
-
-  @Field(() => [Collaborator], { defaultValue: [], nullable: true })
-  collaborators?: Collaborator[];
 }
