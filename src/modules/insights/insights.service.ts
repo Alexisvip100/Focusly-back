@@ -105,7 +105,8 @@ export class InsightsService {
       breakMinutes,
     );
 
-    const heatmap = await this.calculateHeatmap(userId);
+    const { data: heatmap, labels: heatmapLabels } =
+      await this.calculateHeatmap(userId, filter);
 
     return {
       totalFocusHours,
@@ -116,6 +117,7 @@ export class InsightsService {
       productivityTrends,
       timeDistribution,
       heatmap,
+      heatmapLabels,
     };
   }
 
@@ -452,61 +454,103 @@ export class InsightsService {
     return {
       value: `${hours}h ${mins}m`,
       change: 'Calculated from gaps',
-      trend: 'neutral',
+      trend: 'neutral' as const,
     };
   }
 
-  private async calculateHeatmap(userId: string): Promise<number[]> {
-    // Grid: 8 AM (08:00) to 10 PM (22:00) = 14 hours.
-    // Rows: Last 5 days.
-    // Total cells: 14 * 5 = 70.
-    // Values: Intensity 0-5. 0=Empty, 1=Low, 5=High.
-
+  private async calculateHeatmap(
+    userId: string,
+    filter: string,
+  ): Promise<{ data: number[]; labels: string[] }> {
     const sessions = await this.focusSessionsService.findAllByUser(userId);
-
-    // Map: Key = "YYYY-MM-DD-HH" -> Minutes
     const intensityMap = new Map<string, number>();
-
     const now = new Date();
-    const windowStart = new Date(now);
-    windowStart.setDate(now.getDate() - 4);
-    windowStart.setHours(0, 0, 0, 0);
 
-    sessions.forEach((session) => {
-      const start = new Date(session.startedAt);
-      if (start >= windowStart) {
-        const hour = start.getHours();
-        if (hour >= 8 && hour < 22) {
-          const dateKey = start.toISOString().split('T')[0];
-          const key = `${dateKey}-${hour}`;
-          const current = intensityMap.get(key) || 0;
-          intensityMap.set(key, current + session.durationMinutes);
+    if (filter === 'Daily') {
+      // 24 hours of today
+      sessions.forEach((s) => {
+        const start = new Date(s.startedAt);
+        if (start.toDateString() === now.toDateString()) {
+          const hour = start.getHours();
+          intensityMap.set(
+            `${hour}`,
+            (intensityMap.get(`${hour}`) || 0) + s.durationMinutes,
+          );
         }
+      });
+
+      const data = Array.from({ length: 24 }).map((_, h) => {
+        const mins = intensityMap.get(`${h}`) || 0;
+        if (mins === 0) return 0;
+        if (mins < 15) return 1;
+        if (mins < 30) return 2;
+        if (mins < 45) return 3;
+        if (mins < 60) return 4;
+        return 5;
+      });
+
+      return { data, labels: ['12 AM', '6 AM', '12 PM', '6 PM', '11 PM'] };
+    }
+
+    if (filter === 'Weekly') {
+      // Last 7 days
+      const days: string[] = [];
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(now);
+        d.setDate(now.getDate() - i);
+        days.push(d.toISOString().split('T')[0]);
+      }
+
+      sessions.forEach((s) => {
+        const dateKey = new Date(s.startedAt).toISOString().split('T')[0];
+        if (days.includes(dateKey)) {
+          intensityMap.set(
+            dateKey,
+            (intensityMap.get(dateKey) || 0) + s.durationMinutes,
+          );
+        }
+      });
+
+      const data = days.map((day) => {
+        const mins = intensityMap.get(day) || 0;
+        if (mins === 0) return 0;
+        if (mins < 60) return 1;
+        if (mins < 120) return 2;
+        if (mins < 180) return 3;
+        if (mins < 240) return 4;
+        return 5;
+      });
+
+      const labels = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']; // Approximate or map from days
+      return { data, labels };
+    }
+
+    // Monthly: Last 30 days
+    const monthDays: string[] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now);
+      d.setDate(now.getDate() - i);
+      monthDays.push(d.toISOString().split('T')[0]);
+    }
+
+    sessions.forEach((s) => {
+      const dateKey = new Date(s.startedAt).toISOString().split('T')[0];
+      if (monthDays.includes(dateKey)) {
+        intensityMap.set(
+          dateKey,
+          (intensityMap.get(dateKey) || 0) + s.durationMinutes,
+        );
       }
     });
 
-    const heatmap: number[] = [];
-    for (let i = 0; i < 5; i++) {
-      const day = new Date(windowStart);
-      day.setDate(windowStart.getDate() + i);
-      const dateKey = day.toISOString().split('T')[0];
+    const data = monthDays.map((day) => {
+      const mins = intensityMap.get(day) || 0;
+      if (mins === 0) return 0;
+      if (mins < 60) return 1;
+      if (mins < 180) return 2;
+      return 3;
+    });
 
-      for (let h = 8; h < 22; h++) {
-        const key = `${dateKey}-${h}`;
-        const minutes = intensityMap.get(key) || 0;
-
-        let intensity = 0;
-        if (minutes > 0) intensity = 1;
-        if (minutes > 15) intensity = 2;
-        if (minutes > 30) intensity = 3;
-        if (minutes > 45) intensity = 4;
-
-        heatmap.push(intensity);
-      }
-    }
-
-    while (heatmap.length < 70) heatmap.push(0);
-
-    return heatmap;
+    return { data, labels: ['Inicio', 'Mitad', 'Fin'] };
   }
 }

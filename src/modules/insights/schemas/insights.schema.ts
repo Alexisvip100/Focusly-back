@@ -73,4 +73,7 @@ export class InsightsResponse {
 
   @Field(() => [Int])
   heatmap: number[];
+
+  @Field(() => [String], { nullable: true })
+  heatmapLabels?: string[];
 }
