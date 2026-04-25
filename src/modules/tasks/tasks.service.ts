@@ -87,38 +87,43 @@ export class TasksService {
     filters: TaskFilterInput,
     sort?: TaskSortInput,
   ): Promise<ITask[]> {
-    const fireStoreFilters: Filter[] = [Filter.where('deletedAt', '==', null)];
+    const snapshot = await this.collection.where('deletedAt', '==', null).get();
+    let tasks = snapshot.docs.map((doc) => this.mapToTask(doc.data()));
+
     if (filters.status) {
-      fireStoreFilters.push(Filter.where('status', '==', filters.status));
+      tasks = tasks.filter((t) => t.status === filters.status);
     }
     if (filters.priorityLevel) {
-      fireStoreFilters.push(
-        Filter.where('priorityLevel', '==', filters.priorityLevel),
-      );
+      tasks = tasks.filter((t) => t.priorityLevel === filters.priorityLevel);
     }
     if (filters.category) {
-      fireStoreFilters.push(Filter.where('category', '==', filters.category));
+      tasks = tasks.filter((t) => t.category === filters.category);
     }
 
-    let query: admin.firestore.Query = this.collection.where(
-      Filter.and(...fireStoreFilters),
-    );
-
     if (sort && sort.sort) {
-      const fieldMap: Record<string, string> = {
+      const fieldMap: Record<string, keyof ITask> = {
         deadline: 'deadline',
         priority_level: 'priorityLevel',
         estimate_minutes: 'estimateTimer',
         created_at: 'createdAt',
       };
-      const field = fieldMap[sort.sort] || sort.sort;
-      const direction =
-        sort.order?.toLowerCase() === 'desc' ? 'desc' : ('asc' as const);
-      query = query.orderBy(field, direction);
+      const field = fieldMap[sort.sort] || (sort.sort as keyof ITask);
+      const direction = sort.order?.toLowerCase() === 'desc' ? -1 : 1;
+
+      tasks.sort((a, b) => {
+        const valA = a[field];
+        const valB = b[field];
+
+        if (valA === undefined || valA === null) return 1;
+        if (valB === undefined || valB === null) return -1;
+
+        if (valA < valB) return -1 * direction;
+        if (valA > valB) return 1 * direction;
+        return 0;
+      });
     }
 
-    const snapshot = await query.get();
-    return snapshot.docs.map((doc) => this.mapToTask(doc.data()));
+    return tasks;
   }
 
   async findAllByUser(
@@ -126,52 +131,60 @@ export class TasksService {
     filters?: TaskFilterInput,
     sort?: TaskSortInput,
   ): Promise<ITask[]> {
-    const fireStoreFilters: Filter[] = [Filter.where('userId', '==', userId)];
-    fireStoreFilters.push(Filter.where('deletedAt', '==', null));
+    const snapshot = await this.collection
+      .where('userId', '==', userId)
+      .where('deletedAt', '==', null)
+      .get();
+    
+    let tasks = snapshot.docs.map((doc) => this.mapToTask(doc.data()));
 
     if (filters) {
       if (filters.status) {
-        fireStoreFilters.push(Filter.where('status', '==', filters.status));
+        tasks = tasks.filter((t) => t.status === filters.status);
       }
       if (filters.priorityLevel) {
-        fireStoreFilters.push(
-          Filter.where('priorityLevel', '==', filters.priorityLevel),
-        );
+        tasks = tasks.filter((t) => t.priorityLevel === filters.priorityLevel);
       }
       if (filters.category) {
-        fireStoreFilters.push(Filter.where('category', '==', filters.category));
+        tasks = tasks.filter((t) => t.category === filters.category);
       }
       if (filters.startDate) {
-        fireStoreFilters.push(
-          Filter.where('deadline', '>=', new Date(filters.startDate)),
-        );
+        const start = new Date(filters.startDate).getTime();
+        tasks = tasks.filter((t) => t.deadline && new Date(t.deadline).getTime() >= start);
       }
       if (filters.endDate) {
-        fireStoreFilters.push(
-          Filter.where('deadline', '<=', new Date(filters.endDate)),
-        );
+        const end = new Date(filters.endDate).getTime();
+        tasks = tasks.filter((t) => t.deadline && new Date(t.deadline).getTime() <= end);
       }
     }
 
-    let query: admin.firestore.Query = this.collection.where(
-      Filter.and(...fireStoreFilters),
-    );
-
     if (sort && sort.sort) {
-      const fieldMap: Record<string, string> = {
+      const fieldMap: Record<string, keyof ITask> = {
         deadline: 'deadline',
         priority_level: 'priorityLevel',
         estimate_minutes: 'estimateTimer',
         created_at: 'createdAt',
       };
-      const field = fieldMap[sort.sort] || sort.sort;
-      const direction =
-        sort.order?.toLowerCase() === 'desc' ? 'desc' : ('asc' as const);
-      query = query.orderBy(field, direction);
+      const field = fieldMap[sort.sort] || (sort.sort as keyof ITask);
+      const direction = sort.order?.toLowerCase() === 'desc' ? -1 : 1;
+
+      tasks.sort((a, b) => {
+        let valA = a[field];
+        let valB = b[field];
+
+        if (valA instanceof Date) valA = valA.getTime() as any;
+        if (valB instanceof Date) valB = valB.getTime() as any;
+
+        if (valA === undefined || valA === null) return 1;
+        if (valB === undefined || valB === null) return -1;
+
+        if (valA < valB) return -1 * direction;
+        if (valA > valB) return 1 * direction;
+        return 0;
+      });
     }
 
-    const snapshot = await query.get();
-    return snapshot.docs.map((doc) => this.mapToTask(doc.data()));
+    return tasks;
   }
 
   async findOne(id: string): Promise<ITask> {

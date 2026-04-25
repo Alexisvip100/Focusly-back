@@ -88,11 +88,6 @@ export class WorkspacesResolver {
     return this.workspacesService.getTotalWorkspaces(context.req.user.userId);
   }
 
-  @Query(() => Boolean, { name: 'hasWorkspaces' })
-  hasWorkspaces(@Context() context: WorkspaceContext) {
-    return this.workspacesService.hasWorkspaces(context.req.user.userId);
-  }
-
   @Mutation(() => Boolean)
   removeWorkspace(
     @Args('id', { type: () => ID }) id: string,

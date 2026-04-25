@@ -108,14 +108,6 @@ export class WorkspacesService {
     } as Workspace;
   }
 
-  async hasWorkspaces(userId: string): Promise<boolean> {
-    const snapshot = await this.collectionRef
-      .where('userId', '==', userId)
-      .limit(1)
-      .get();
-    return !snapshot.empty;
-  }
-
   async getTotalWorkspaces(userId: string): Promise<number> {
     const snapshot = await this.collectionRef
       .where('userId', '==', userId)
