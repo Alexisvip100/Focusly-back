@@ -4,7 +4,6 @@ import { ITask } from './interfaces/task.interface';
 import * as admin from 'firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 import { TaskFilterInput, TaskSortInput } from './schemas/task.inputs';
-import { Filter } from 'firebase-admin/firestore';
 import { GoogleCalendarService } from '../google-calendar/google-calendar.service';
 
 @Injectable()
@@ -54,6 +53,8 @@ export class TasksService {
       ...taskData,
       id: docRef.id,
       deletedAt: null,
+      notified: false,
+      lastMinuteNotified: false,
       createdAt: admin.firestore.FieldValue.serverTimestamp(),
       updatedAt: admin.firestore.FieldValue.serverTimestamp(),
     });
@@ -91,6 +92,7 @@ export class TasksService {
     let tasks = snapshot.docs.map((doc) => this.mapToTask(doc.data()));
 
     if (filters.status) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
       tasks = tasks.filter((t) => t.status === filters.status);
     }
     if (filters.priorityLevel) {
@@ -126,6 +128,36 @@ export class TasksService {
     return tasks;
   }
 
+  async findUpcomingTasks(startDate: Date, endDate: Date): Promise<ITask[]> {
+    const snapshot = await this.collection
+      .where('deadline', '>=', startDate)
+      .where('deadline', '<=', endDate)
+      .where('notified', '==', false)
+      .where('deletedAt', '==', null)
+      .get();
+
+    return snapshot.docs.map((doc) => this.mapToTask(doc.data()));
+  }
+
+  async findLastMinuteTasks(startDate: Date, endDate: Date): Promise<ITask[]> {
+    const snapshot = await this.collection
+      .where('deadline', '>=', startDate)
+      .where('deadline', '<=', endDate)
+      .where('lastMinuteNotified', '==', false)
+      .where('deletedAt', '==', null)
+      .get();
+
+    return snapshot.docs.map((doc) => this.mapToTask(doc.data()));
+  }
+
+  async markAsNotified(id: string): Promise<void> {
+    await this.collection.doc(id).update({ notified: true });
+  }
+
+  async markAsLastMinuteNotified(id: string): Promise<void> {
+    await this.collection.doc(id).update({ lastMinuteNotified: true });
+  }
+
   async findAllByUser(
     userId: string,
     filters?: TaskFilterInput,
@@ -135,11 +167,12 @@ export class TasksService {
       .where('userId', '==', userId)
       .where('deletedAt', '==', null)
       .get();
-    
+
     let tasks = snapshot.docs.map((doc) => this.mapToTask(doc.data()));
 
     if (filters) {
       if (filters.status) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-enum-comparison
         tasks = tasks.filter((t) => t.status === filters.status);
       }
       if (filters.priorityLevel) {
@@ -150,11 +183,15 @@ export class TasksService {
       }
       if (filters.startDate) {
         const start = new Date(filters.startDate).getTime();
-        tasks = tasks.filter((t) => t.deadline && new Date(t.deadline).getTime() >= start);
+        tasks = tasks.filter(
+          (t) => t.deadline && new Date(t.deadline).getTime() >= start,
+        );
       }
       if (filters.endDate) {
         const end = new Date(filters.endDate).getTime();
-        tasks = tasks.filter((t) => t.deadline && new Date(t.deadline).getTime() <= end);
+        tasks = tasks.filter(
+          (t) => t.deadline && new Date(t.deadline).getTime() <= end,
+        );
       }
     }
 
@@ -172,7 +209,9 @@ export class TasksService {
         let valA = a[field];
         let valB = b[field];
 
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         if (valA instanceof Date) valA = valA.getTime() as any;
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         if (valB instanceof Date) valB = valB.getTime() as any;
 
         if (valA === undefined || valA === null) return 1;
@@ -198,6 +237,11 @@ export class TasksService {
   async update(id: string, updateData: Partial<ITask>): Promise<ITask> {
     const docRef = this.collection.doc(id);
     const sanitizedUpdate = this.sanitizeData(updateData);
+
+    if (updateData.deadline) {
+      sanitizedUpdate.notified = false;
+      sanitizedUpdate.lastMinuteNotified = false;
+    }
 
     const doc = await docRef.get();
 
@@ -413,6 +457,7 @@ export class TasksService {
         category: s.category as string | undefined,
       })),
       collaborators: (data.collaborators as any[]) || [],
+      notified: (data.notified as boolean) || false,
     } as ITask;
   }
 }

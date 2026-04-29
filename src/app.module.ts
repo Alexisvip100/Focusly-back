@@ -20,9 +20,11 @@ import { WorkspacesModule } from './modules/workspaces/workspaces.module';
 import { InsightsModule } from './modules/insights/insights.module';
 import { FoldersModule } from './modules/folders/folders.module';
 import { GoogleCalendarModule } from './modules/google-calendar/google-calendar.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule.forRoot({
       isGlobal: true,
     }),

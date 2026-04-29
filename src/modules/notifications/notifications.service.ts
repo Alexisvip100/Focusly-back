@@ -40,4 +40,27 @@ export class NotificationsService {
     const snapshot = await this.collection.where('userId', '==', userId).get();
     return snapshot.docs.map((doc) => doc.data() as INotification);
   }
+
+  async sendPushNotification(
+    token: string,
+    title: string,
+    body: string,
+    data?: Record<string, string>,
+  ): Promise<void> {
+    const message = {
+      notification: {
+        title,
+        body,
+      },
+      token,
+      data,
+    };
+
+    try {
+      await admin.messaging().send(message);
+      console.log('Successfully sent message:', title);
+    } catch (error) {
+      console.error('Error sending message:', error);
+    }
+  }
 }

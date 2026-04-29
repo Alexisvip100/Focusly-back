@@ -18,4 +18,5 @@ export interface IUser {
   subscriptionStatus: string;
   settings?: IUserSettings;
   externalId?: string;
+  fcmToken?: string;
 }

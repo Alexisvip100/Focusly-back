@@ -18,4 +18,8 @@ export class UpdateUserDto extends PartialType(CreateUserDto) {
   @IsString()
   @IsOptional()
   picture?: string;
+
+  @IsString()
+  @IsOptional()
+  fcmToken?: string;
 }

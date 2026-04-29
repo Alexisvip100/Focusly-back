@@ -53,4 +53,6 @@ export interface ITask {
     avatar?: string;
     responseStatus?: string;
   }[];
+  notified?: boolean;
+  lastMinuteNotified?: boolean;
 }
