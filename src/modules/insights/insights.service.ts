@@ -168,14 +168,30 @@ export class InsightsService {
         return acc;
       }, 0);
 
-      // Actual: sessions that started in this hour today
-      const actualMins = sessions.reduce((acc, s) => {
+      let actualMins = sessions.reduce((acc, s) => {
         const sDate = new Date(s.startedAt);
         if (this.isSameDay(sDate, today) && sDate.getHours() === hour) {
           return acc + (s.durationMinutes || 0);
         }
         return acc;
       }, 0);
+
+      // Fallback to tasks updated in this hour (less precise but better than 0)
+      if (actualMins === 0) {
+        actualMins = tasks.reduce((acc, t) => {
+          const uDate = new Date(t.updatedAt || t.createdAt);
+          if (this.isSameDay(uDate, today) && uDate.getHours() === hour) {
+            let taskMins = t.realTimer || 0;
+            if (t.subtasks) {
+              t.subtasks.forEach((st) => {
+                taskMins += st.timer || 0;
+              });
+            }
+            return acc + taskMins;
+          }
+          return acc;
+        }, 0);
+      }
 
       trends.push({
         label,
@@ -214,13 +230,34 @@ export class InsightsService {
         return acc;
       }, 0);
 
-      const actualMins = sessions.reduce((acc, s) => {
+      // 1. Sum up from Sessions (Precise)
+      let actualMins = sessions.reduce((acc, s) => {
         const sDate = new Date(s.startedAt);
         if (this.isSameDay(sDate, date)) {
           return acc + (s.durationMinutes || 0);
         }
         return acc;
       }, 0);
+
+      // 2. Fallback to Tasks realTimer if no sessions exist for this day (Approximation)
+      // We use updatedAt to attribute the time spent to a specific day
+      if (actualMins === 0) {
+        actualMins = tasks.reduce((acc, t) => {
+          const uDate = new Date(t.updatedAt || t.createdAt);
+          if (this.isSameDay(uDate, date)) {
+            // Include parent task realTimer
+            let taskMins = t.realTimer || 0;
+            // Include subtasks timer
+            if (t.subtasks) {
+              t.subtasks.forEach((st) => {
+                taskMins += st.timer || 0;
+              });
+            }
+            return acc + taskMins;
+          }
+          return acc;
+        }, 0);
+      }
 
       trends.push({
         label: dayNames[i],
@@ -262,7 +299,7 @@ export class InsightsService {
         return acc;
       }, 0);
 
-      const actualMins = sessions.reduce((acc, s) => {
+      let actualMins = sessions.reduce((acc, s) => {
         const sDate = new Date(s.startedAt);
         if (
           sDate >= weekStart &&
@@ -273,6 +310,26 @@ export class InsightsService {
         }
         return acc;
       }, 0);
+
+      if (actualMins === 0) {
+        actualMins = tasks.reduce((acc, t) => {
+          const uDate = new Date(t.updatedAt || t.createdAt);
+          if (
+            uDate >= weekStart &&
+            uDate <= weekEnd &&
+            uDate.getMonth() === month
+          ) {
+            let taskMins = t.realTimer || 0;
+            if (t.subtasks) {
+              t.subtasks.forEach((st) => {
+                taskMins += st.timer || 0;
+              });
+            }
+            return acc + taskMins;
+          }
+          return acc;
+        }, 0);
+      }
 
       trends.push({
         label,
@@ -521,7 +578,7 @@ export class InsightsService {
         return 5;
       });
 
-      const labels = ['LUN', 'MAR', 'MIÉ', 'JUE', 'VIE', 'SÁB', 'DOM']; // Approximate or map from days
+      const labels = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
       return { data, labels };
     }
 
