@@ -62,16 +62,35 @@ export class NotificationsCronService {
     }
   }
 
-  private async sendTaskNotification(user: any, task: any, title: string) {
+  private async sendTaskNotification(
+    user: { id: string; fcmToken?: string | null },
+    task: { id: string; title: string; deadline?: Date | string | null },
+    title: string,
+  ) {
+    if (!user.fcmToken) return;
+
     try {
-      await this.notificationsService.sendPushNotification(user.fcmToken, title, `Your task "${task.title}" starts soon.`, {
-        taskId: task.id,
-        taskTitle: task.title,
-        deadline: task.deadline?.toISOString() || '',
-      });
+      const deadlineStr =
+        task.deadline instanceof Date
+          ? task.deadline.toISOString()
+          : String(task.deadline || '');
+
+      await this.notificationsService.sendPushNotification(
+        user.fcmToken,
+        title,
+        `Your task "${task.title}" starts soon.`,
+        {
+          taskId: task.id,
+          taskTitle: task.title,
+          deadline: deadlineStr,
+        },
+      );
       this.logger.log(`Sent "${title}" for task ${task.id} to user ${user.id}`);
     } catch (err) {
-      this.logger.error(`Failed to send notification for task ${task.id}:`, err);
+      this.logger.error(
+        `Failed to send notification for task ${task.id}:`,
+        err,
+      );
     }
   }
 }

@@ -67,12 +67,12 @@ export class WorkspacesService {
     const snapshot = await query.get();
 
     let workspaces = snapshot.docs.map((doc) => {
-      const data = doc.data();
+      const data = doc.data() as admin.firestore.DocumentData;
       return {
         ...data,
-        saveStatus: data.saveStatus ?? false,
-        createdAt: data.createdAt.toDate(),
-        updatedAt: data.updatedAt.toDate(),
+        saveStatus: (data.saveStatus as boolean | undefined) ?? false,
+        createdAt: (data.createdAt as admin.firestore.Timestamp).toDate(),
+        updatedAt: (data.updatedAt as admin.firestore.Timestamp).toDate(),
       } as Workspace;
     });
 
@@ -95,16 +95,16 @@ export class WorkspacesService {
       throw new NotFoundException(`Workspace with ID ${id} not found`);
     }
 
-    const data = doc.data()!;
+    const data = doc.data() as admin.firestore.DocumentData;
     if (data.userId !== userId) {
       throw new NotFoundException(`Workspace with ID ${id} not found`);
     }
 
     return {
       ...data,
-      saveStatus: data.saveStatus ?? false,
-      createdAt: data.createdAt.toDate(),
-      updatedAt: data.updatedAt.toDate(),
+      saveStatus: (data.saveStatus as boolean | undefined) ?? false,
+      createdAt: (data.createdAt as admin.firestore.Timestamp).toDate(),
+      updatedAt: (data.updatedAt as admin.firestore.Timestamp).toDate(),
     } as Workspace;
   }
 
@@ -134,7 +134,7 @@ export class WorkspacesService {
     }
 
     const now = new Date();
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       ...updateWorkspaceInput,
       updatedAt: admin.firestore.Timestamp.fromDate(now),
     };
@@ -143,20 +143,22 @@ export class WorkspacesService {
     delete updateData.id;
 
     // Remove undefined fields
-    Object.keys(updateData).forEach(
-      (key) => updateData[key] === undefined && delete updateData[key],
-    );
+    Object.keys(updateData).forEach((key) => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
 
-    await docRef.update(updateData);
+    await docRef.update(updateData as admin.firestore.UpdateData<admin.firestore.DocumentData>);
 
     const updatedDoc = await docRef.get();
-    const updatedData = updatedDoc.data()!;
+    const updatedData = updatedDoc.data() as admin.firestore.DocumentData;
 
     return {
       ...updatedData,
-      saveStatus: updatedData.saveStatus ?? false,
-      createdAt: updatedData.createdAt.toDate(),
-      updatedAt: updatedData.updatedAt.toDate(),
+      saveStatus: (updatedData.saveStatus as boolean | undefined) ?? false,
+      createdAt: (updatedData.createdAt as admin.firestore.Timestamp).toDate(),
+      updatedAt: (updatedData.updatedAt as admin.firestore.Timestamp).toDate(),
     } as Workspace;
   }
 
@@ -187,12 +189,12 @@ export class WorkspacesService {
     }
 
     const doc = snapshot.docs[0];
-    const data = doc.data();
+    const data = doc.data() as admin.firestore.DocumentData;
 
     return {
       ...data,
-      createdAt: data.createdAt.toDate(),
-      updatedAt: data.updatedAt.toDate(),
+      createdAt: (data.createdAt as admin.firestore.Timestamp).toDate(),
+      updatedAt: (data.updatedAt as admin.firestore.Timestamp).toDate(),
     } as Workspace;
   }
 }

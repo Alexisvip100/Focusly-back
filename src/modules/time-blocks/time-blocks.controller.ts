@@ -9,7 +9,11 @@ export class TimeBlocksController {
 
   @Post()
   async create(@Body() createDto: CreateTimeBlockDto): Promise<string> {
-    return this.timeBlocksService.create(createDto as any);
+    return this.timeBlocksService.create({
+      ...createDto,
+      startTime: new Date(createDto.startTime),
+      endTime: new Date(createDto.endTime),
+    } as Partial<ITimeBlock>);
   }
 
   @Get()

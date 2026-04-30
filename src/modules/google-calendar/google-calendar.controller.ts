@@ -15,6 +15,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { processGoogleEvent } from './utils/google-calendar.pipeline';
 import { TasksService } from '../tasks/tasks.service';
 import { Inject, forwardRef } from '@nestjs/common';
+import { GoogleEvent } from './interfaces/google-calendar.interfaces';
 
 /**
  * Normalizes a Google Event ID by removing leading underscores.
@@ -52,7 +53,7 @@ export class GoogleCalendarController {
       timeMin,
       timeMax,
     )) as {
-      items?: any[];
+      items?: GoogleEvent[];
     };
 
     if (!rawData.items) return [];
@@ -65,7 +66,10 @@ export class GoogleCalendarController {
     const filteredItems = rawData.items.filter((item) => {
       const normalizedEventId = normalizeId(item.id as string);
       const baseEventId = getBaseId(item.id as string);
-      return !normalizedSyncedIds.has(normalizedEventId) && !normalizedSyncedIds.has(baseEventId);
+      return (
+        !normalizedSyncedIds.has(normalizedEventId) &&
+        !normalizedSyncedIds.has(baseEventId)
+      );
     });
 
     // 3. Process the remaining events through the pipeline
