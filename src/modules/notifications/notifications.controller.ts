@@ -9,7 +9,10 @@ export class NotificationsController {
 
   @Post()
   async create(@Body() createDto: CreateNotificationDto): Promise<string> {
-    return this.notificationsService.create(createDto as any);
+    return this.notificationsService.create({
+      ...createDto,
+      scheduledAt: new Date(createDto.scheduledAt),
+    } as Partial<INotification>);
   }
 
   @Get()

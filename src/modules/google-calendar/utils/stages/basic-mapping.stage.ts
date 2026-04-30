@@ -2,7 +2,6 @@ import {
   GoogleEvent,
   ProcessedGoogleTask,
 } from '../../interfaces/google-calendar.interfaces';
-import { ITask } from '../../../tasks/interfaces/task.interface';
 
 const mapGoogleColorToPriority = (colorId?: string): number => {
   if (!colorId) return 1; // Default to Low priority
@@ -51,7 +50,7 @@ export const BasicMappingStage = (event: GoogleEvent): ProcessedGoogleTask => {
     deadline: deadline.toISOString(),
     estimated_start_date: start.toISOString(),
     estimated_end_date: deadline.toISOString(),
-    status: 'Scheduled' as ITask['status'],
+    status: 'Scheduled',
     priority_level: mapGoogleColorToPriority(event.colorId),
     subtasks: [],
     tags: [],

@@ -103,7 +103,7 @@ export class WorkspacesResolver {
     }
     try {
       return await this.tasksService.findOne(workspace.taskId);
-    } catch (error) {
+    } catch {
       return null;
     }
   }
@@ -118,7 +118,7 @@ export class WorkspacesResolver {
         workspace.folderId,
         workspace.userId,
       );
-    } catch (error) {
+    } catch {
       return null;
     }
   }

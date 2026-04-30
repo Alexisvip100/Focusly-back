@@ -22,7 +22,7 @@ export class FoldersService {
     const newFolderRef = this.collectionRef.doc(id);
     const now = new Date();
 
-    const folderData: any = {
+    const folderData: Record<string, unknown> = {
       id: newFolderRef.id,
       userId,
       name: createFolderInput.name,
@@ -32,11 +32,15 @@ export class FoldersService {
     };
 
     // Remove undefined fields for Firestore
-    Object.keys(folderData).forEach(
-      (key) => folderData[key] === undefined && delete folderData[key],
-    );
+    Object.keys(folderData).forEach((key) => {
+      if (folderData[key] === undefined) {
+        delete folderData[key];
+      }
+    });
 
-    await newFolderRef.set(folderData);
+    await newFolderRef.set(
+      folderData as admin.firestore.WithFieldValue<admin.firestore.DocumentData>,
+    );
 
     return {
       ...folderData,
@@ -54,8 +58,8 @@ export class FoldersService {
       const data = doc.data();
       return {
         ...data,
-        createdAt: data.createdAt.toDate(),
-        updatedAt: data.updatedAt.toDate(),
+        createdAt: (data.createdAt as admin.firestore.Timestamp).toDate(),
+        updatedAt: (data.updatedAt as admin.firestore.Timestamp).toDate(),
       } as Folder;
     });
   }
@@ -67,15 +71,15 @@ export class FoldersService {
       throw new NotFoundException(`Folder with ID ${id} not found`);
     }
 
-    const data = doc.data()!;
+    const data = doc.data() as admin.firestore.DocumentData;
     if (data.userId !== userId) {
       throw new NotFoundException(`Folder with ID ${id} not found`);
     }
 
     return {
       ...data,
-      createdAt: data.createdAt.toDate(),
-      updatedAt: data.updatedAt.toDate(),
+      createdAt: (data.createdAt as admin.firestore.Timestamp).toDate(),
+      updatedAt: (data.updatedAt as admin.firestore.Timestamp).toDate(),
     } as Folder;
   }
 
@@ -97,26 +101,30 @@ export class FoldersService {
     }
 
     const now = new Date();
-    const updateData: any = {
+    const updateData: Record<string, unknown> = {
       ...updateFolderInput,
       updatedAt: admin.firestore.Timestamp.fromDate(now),
     };
 
     delete updateData.id;
 
-    Object.keys(updateData).forEach(
-      (key) => updateData[key] === undefined && delete updateData[key],
+    Object.keys(updateData).forEach((key) => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
+    await docRef.update(
+      updateData as admin.firestore.UpdateData<admin.firestore.DocumentData>,
     );
 
-    await docRef.update(updateData);
-
     const updatedDoc = await docRef.get();
-    const updatedData = updatedDoc.data()!;
+    const updatedData = updatedDoc.data() as admin.firestore.DocumentData;
 
     return {
       ...updatedData,
-      createdAt: updatedData.createdAt.toDate(),
-      updatedAt: updatedData.updatedAt.toDate(),
+      createdAt: (updatedData.createdAt as admin.firestore.Timestamp).toDate(),
+      updatedAt: (updatedData.updatedAt as admin.firestore.Timestamp).toDate(),
     } as Folder;
   }
 
@@ -138,7 +146,7 @@ export class FoldersService {
     const workspacesSnapshot = await workspacesRef
       .where('folderId', '==', id)
       .get();
-    
+
     const batch = this.firebaseService.db.batch();
     workspacesSnapshot.docs.forEach((doc) => {
       batch.update(doc.ref, { folderId: null });

@@ -9,7 +9,11 @@ export class FocusSessionsController {
 
   @Post()
   async create(@Body() createDto: CreateFocusSessionDto): Promise<string> {
-    return this.focusSessionsService.create(createDto as any);
+    return this.focusSessionsService.create({
+      ...createDto,
+      startedAt: new Date(createDto.startedAt),
+      ...(createDto.endedAt && { endedAt: new Date(createDto.endedAt) }),
+    } as Partial<IFocusSession>);
   }
 
   @Get()
