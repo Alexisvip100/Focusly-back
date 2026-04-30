@@ -7,22 +7,19 @@ const mapGoogleColorToPriority = (colorId?: string): number => {
   if (!colorId) return 1; // Default to Low priority
 
   const priorityMap: Record<string, number> = {
-    // High Priority (Level 3) - Reds, Pinks, Oranges, Bold Purples
-    '11': 3, // Tomato
-    '4': 3, // Flamingo
-    '6': 3, // Tangerine
-    '3': 3, // Grape
+    '11': 3,
+    '4': 3,
+    '6': 3,
+    '3': 3,
 
-    // Medium Priority (Level 2) - Yellows, Blues, Bright Greens
-    '5': 2, // Banana
-    '9': 2, // Blueberry
-    '7': 2, // Peacock
-    '2': 2, // Sage
+    '5': 2,
+    '9': 2,
+    '7': 2,
+    '2': 2,
 
-    // Low Priority (Level 1) - Lavenders, Dark Greens, Greys
-    '1': 1, // Lavender
-    '10': 1, // Basil
-    '8': 1, // Graphite
+    '1': 1,
+    '10': 1,
+    '8': 1,
   };
 
   return priorityMap[colorId] || 1;
