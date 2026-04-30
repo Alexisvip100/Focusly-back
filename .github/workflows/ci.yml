@@ -2,9 +2,9 @@ name: Focusly Backend CI
 
 on:
   push:
-    branches: [ main, master, dev ]
+    branches: [ main, master, dev, ci ]
   pull_request:
-    branches: [ main, master, dev ]
+    branches: [ main, master, dev, ci ]
 
 jobs:
   build-and-test:
