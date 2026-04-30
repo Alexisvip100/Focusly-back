@@ -5,7 +5,7 @@
 export class Pipeline<TInput, TOutput> {
   private readonly stages: Array<{
     name: string;
-    execute: (input: any) => any | Promise<any>;
+    execute: (input: unknown) => unknown;
   }> = [];
 
   /**
@@ -17,7 +17,7 @@ export class Pipeline<TInput, TOutput> {
     name: string,
     stageFn: (input: TOutput) => TNext | Promise<TNext>,
   ): Pipeline<TInput, TNext> {
-    this.stages.push({ name, execute: stageFn });
+    this.stages.push({ name, execute: stageFn as (input: unknown) => unknown });
     return this as unknown as Pipeline<TInput, TNext>;
   }
 
@@ -26,16 +26,18 @@ export class Pipeline<TInput, TOutput> {
    * @param input - The initial data to process.
    */
   async execute(input: TInput): Promise<TOutput> {
-    let result: any = input;
+    let result: unknown = input;
 
     for (const stage of this.stages) {
       try {
         result = await stage.execute(result);
       } catch (error) {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         console.error(`Error in pipeline stage "${stage.name}":`, error);
         // We throw a more descriptive error but preserve the original cause
         throw new Error(
-          `Pipeline failed at stage "${stage.name}": ${error.message}`,
+          `Pipeline failed at stage "${stage.name}": ${errorMessage}`,
         );
       }
     }

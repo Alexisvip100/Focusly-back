@@ -2,7 +2,7 @@ import {
   GoogleEvent,
   ProcessedGoogleTask,
 } from '../../interfaces/google-calendar.interfaces';
-import { ITask } from '../../../tasks/interfaces/task.interface';
+import type { ITask } from '../../../tasks/interfaces/task.interface';
 
 const mapGoogleColorToPriority = (colorId?: string): number => {
   if (!colorId) return 1; // Default to Low priority
